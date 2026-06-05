@@ -17,7 +17,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "orbita",
+		Title:  "Orbita",
 		Width:  1024,
 		Height: 768,
 		AssetServer: &assetserver.Options{
@@ -28,6 +28,7 @@ func main() {
 		Bind: []interface{}{
 			app,
 		},
+		OnShutdown: app.shutdown,
 	})
 
 	if err != nil {
