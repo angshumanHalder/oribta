@@ -124,3 +124,23 @@ func (a *App) DeleteEnvironment(name string) error {
 	a.store.Environments = append(a.store.Environments[:idx], a.store.Environments[idx+1:]...)
 	return a.store.Save()
 }
+
+func (a *App) UpdateEnvironment(env profiles.Environment) error {
+	if a.store == nil {
+		return fmt.Errorf("No config found")
+	}
+	for i, e := range a.store.Environments {
+		if e.Name == env.Name {
+			a.store.Environments[i] = env
+			if err := a.store.Save(); err != nil {
+				return err
+			}
+			if a.store.Active == env.Name {
+				a.proxy.SetHeaders(env.Headers)
+				a.proxy.SetRules(env.RewriteRules)
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("Environment not found")
+}
