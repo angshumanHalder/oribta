@@ -6,6 +6,10 @@ export function AddEnvironment(arg1) {
   return window['go']['main']['App']['AddEnvironment'](arg1);
 }
 
+export function ApplyEnvMapping(arg1, arg2) {
+  return window['go']['main']['App']['ApplyEnvMapping'](arg1, arg2);
+}
+
 export function DeleteEnvironment(arg1) {
   return window['go']['main']['App']['DeleteEnvironment'](arg1);
 }
@@ -14,8 +18,16 @@ export function GetActiveEnv() {
   return window['go']['main']['App']['GetActiveEnv']();
 }
 
+export function GetEnvConfigNames() {
+  return window['go']['main']['App']['GetEnvConfigNames']();
+}
+
 export function GetEnvironments() {
   return window['go']['main']['App']['GetEnvironments']();
+}
+
+export function GetMocks() {
+  return window['go']['main']['App']['GetMocks']();
 }
 
 export function GetProxyAddr() {
@@ -26,8 +38,24 @@ export function GetRewriteRules() {
   return window['go']['main']['App']['GetRewriteRules']();
 }
 
+export function ImportEnvConfig(arg1) {
+  return window['go']['main']['App']['ImportEnvConfig'](arg1);
+}
+
+export function OpenFilePicker() {
+  return window['go']['main']['App']['OpenFilePicker']();
+}
+
+export function OpenInChrome() {
+  return window['go']['main']['App']['OpenInChrome']();
+}
+
 export function SetActiveEnv(arg1) {
   return window['go']['main']['App']['SetActiveEnv'](arg1);
+}
+
+export function SetMocks(arg1) {
+  return window['go']['main']['App']['SetMocks'](arg1);
 }
 
 export function SetRewriteRules(arg1) {

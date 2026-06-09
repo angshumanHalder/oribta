@@ -51,3 +51,28 @@ export namespace profiles {
 
 }
 
+export namespace proxy {
+	
+	export class MockRule {
+	    Method: string;
+	    Path: string;
+	    Body: string;
+	    Enabled: boolean;
+	    Status: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MockRule(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Method = source["Method"];
+	        this.Path = source["Path"];
+	        this.Body = source["Body"];
+	        this.Enabled = source["Enabled"];
+	        this.Status = source["Status"];
+	    }
+	}
+
+}
+

@@ -75,7 +75,7 @@ export function HeaderEditor({ headers, onSave }: Props) {
           </div>
           <Button
             variant="destructive"
-            className="flex-none w-8"
+            className="flex-none w-8 cursor-pointer"
             onClick={() => removeRowHandler(idx)}
           >
             <Trash />
@@ -84,14 +84,14 @@ export function HeaderEditor({ headers, onSave }: Props) {
       ))}
       <Button
         variant="secondary"
-        className="w-full mb-2"
+        className="w-full mb-2 cursor-pointer"
         onClick={addRowHandler}
       >
         Add Row
       </Button>
       <Button
         variant="default"
-        className="w-full"
+        className="w-full cursor-pointer"
         onClick={() => saveRowsHandler()}
       >
         Save
