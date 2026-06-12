@@ -3,23 +3,31 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
 	"orbita/cdp"
+	"orbita/pac"
 	"orbita/profiles"
 	"orbita/proxy"
 	"os"
 	"os/exec"
 	goruntime "runtime"
+	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx       context.Context
-	proxy     *proxy.Proxy
-	store     *profiles.ProfileStore
-	envConfig *profiles.EnvConfig
-	recorder  *cdp.Recorder
+	ctx        context.Context
+	proxy      *proxy.Proxy
+	store      *profiles.ProfileStore
+	envConfig  *profiles.EnvConfig
+	recorder   *cdp.Recorder
+	pacDomains []string
+	pacAddr    string
+	pacMu      sync.Mutex
 }
 
 // NewApp creates a new App application struct
@@ -51,7 +59,21 @@ func (a *App) startup(ctx context.Context) {
 		fmt.Println("proxy start error", err)
 		return
 	}
+	pacLn, err := net.Listen("tcp", "127.0.0.1:0")
+	if err == nil {
+		a.pacAddr = pacLn.Addr().String()
+		mux := http.NewServeMux()
+		mux.HandleFunc("/proxy.pac", func(w http.ResponseWriter, r *http.Request) {
+			a.pacMu.Lock()
+			domains := a.pacDomains
+			a.pacMu.Unlock()
+			w.Header().Set("Content-Type", "application/x-ns-proxy-autoconfig")
+			fmt.Fprintf(w, pac.Generate(domains, a.proxy.Addr()))
+		})
+		go http.Serve(pacLn, mux)
+	}
 	fmt.Println("proxy listening on ", addr)
+	fmt.Println("PAC server ", a.pacAddr)
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -80,6 +102,11 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	a.store = store
+	if len(a.store.PACDomains) > 0 {
+		a.pacMu.Lock()
+		a.pacDomains = a.store.PACDomains
+		a.pacMu.Unlock()
+	}
 	if env := a.store.ActiveEnv(); env != nil {
 		a.proxy.SetHeaders(env.Headers)
 		a.proxy.SetRules(env.RewriteRules)
@@ -198,15 +225,15 @@ func (a *App) OpenInChrome() error {
 	case "darwin":
 		cmd = exec.Command(
 			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-			"--proxy-server="+addr,
+			"--proxy-pac-url=http://"+a.pacAddr+"/proxy.pac",
 			"--disable-quic",
 			"--remote-debugging-port=9222",
 			"--user-data-dir=/tmp/orbita-chrome",
 		)
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", "chrome", "--proxy-server="+addr, "--user-data-dir=%TEMP%\\oribta-chrome")
+		cmd = exec.Command("cmd", "/c", "start", "chrome", "--proxy-pac-url=http://"+a.pacAddr+"/proxy.pac", "--user-data-dir=%TEMP%\\oribta-chrome")
 	case "linux":
-		cmd = exec.Command("google-chrome", "--proxy-server="+addr, "--user-data-dir=/tmp/orbita-chrome")
+		cmd = exec.Command("google-chrome", "--proxy-pac-url=http://"+a.pacAddr+"/proxy.pac", "--user-data-dir=/tmp/orbita-chrome")
 	default:
 		return fmt.Errorf("unsupported OS: %s", goruntime.GOOS)
 	}
@@ -219,6 +246,25 @@ func (a *App) ImportEnvConfig(path string) error {
 		return err
 	}
 	a.envConfig = cfg
+	domains := extractDomains(cfg)
+	a.pacMu.Lock()
+	defer a.pacMu.Unlock()
+	for _, d := range domains {
+		found := false
+		for _, existing := range a.pacDomains {
+			if d == existing {
+				found = true
+				break
+			}
+		}
+		if !found {
+			a.pacDomains = append(a.pacDomains, d)
+		}
+	}
+	if a.store != nil {
+		a.store.PACDomains = a.pacDomains
+		a.store.Save()
+	}
 	return nil
 }
 
@@ -284,4 +330,65 @@ func (a *App) StartRecording() error {
 func (a *App) StopRecording() string {
 	session := a.recorder.Stop()
 	return cdp.GeneratePlaywright(session)
+}
+
+func (a *App) GetPACAddr() string {
+	return a.pacAddr
+}
+
+func (a *App) GetPACDomains() []string {
+	a.pacMu.Lock()
+	defer a.pacMu.Unlock()
+	return a.pacDomains
+}
+
+func (a *App) AddPACDomain(domain string) {
+	a.pacMu.Lock()
+	defer a.pacMu.Unlock()
+	for _, d := range a.pacDomains {
+		if d == domain {
+			return
+		}
+	}
+	a.pacDomains = append(a.pacDomains, domain)
+	if a.store != nil {
+		a.store.PACDomains = a.pacDomains
+		a.store.Save()
+	}
+}
+
+func (a *App) RemovePACDomain(domain string) {
+	a.pacMu.Lock()
+	defer a.pacMu.Unlock()
+	for i, d := range a.pacDomains {
+		if d == domain {
+			a.pacDomains = append(a.pacDomains[:i], a.pacDomains[i+1:]...)
+			if a.store != nil {
+				a.store.PACDomains = a.pacDomains
+				a.store.Save()
+			}
+			return
+		}
+	}
+}
+
+func extractDomains(cfg *profiles.EnvConfig) []string {
+	seen := map[string]bool{}
+	var domains []string
+	add := func(rawURL string) {
+		u, err := url.Parse(rawURL)
+		if err == nil && u.Host != "" {
+			host := u.Hostname()
+			if !seen[host] {
+				seen[host] = true
+				domains = append(domains, host)
+			}
+		}
+	}
+	for _, env := range cfg.Environments {
+		for _, u := range env.URLs {
+			add(u)
+		}
+	}
+	return domains
 }

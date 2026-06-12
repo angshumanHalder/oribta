@@ -12,6 +12,7 @@ import { Trash } from "lucide-react";
 import { HeaderEditor } from "./HeaderEditor";
 import { RewriteRulesEditor } from "./RewriteRulesEditor";
 import { EnvMappingPanel } from "./EnvMappingPanel";
+import { PACDomainsPanel } from "./PACDomainsPanel";
 
 type Props = {
   activeEnv: profiles.Environment | null;
@@ -110,6 +111,7 @@ export function ConfigPanel({
         <TabsList>
           <TabsTrigger value="headers">Headers</TabsTrigger>
           <TabsTrigger value="env-mapping">Mapping & Rules</TabsTrigger>
+          <TabsTrigger value="pac-domains">PAC Domains</TabsTrigger>
         </TabsList>
         <TabsContent value="headers" className="flex-1 overflow-auto mt-0">
           <h3 className="text-xl font-bold tracking-tight mb-2">Headers</h3>
@@ -133,6 +135,9 @@ export function ConfigPanel({
               />
             )}
           </div>
+        </TabsContent>
+        <TabsContent value="pac-domains">
+          <PACDomainsPanel />
         </TabsContent>
       </Tabs>
     </div>

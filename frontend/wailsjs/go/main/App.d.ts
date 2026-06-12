@@ -5,6 +5,8 @@ import {proxy} from '../models';
 
 export function AddEnvironment(arg1:profiles.Environment):Promise<void>;
 
+export function AddPACDomain(arg1:string):Promise<void>;
+
 export function ApplyEnvMapping(arg1:string,arg2:string):Promise<void>;
 
 export function DeleteEnvironment(arg1:string):Promise<void>;
@@ -17,6 +19,10 @@ export function GetEnvironments():Promise<Array<profiles.Environment>>;
 
 export function GetMocks():Promise<Array<proxy.MockRule>>;
 
+export function GetPACAddr():Promise<string>;
+
+export function GetPACDomains():Promise<Array<string>>;
+
 export function GetProxyAddr():Promise<string>;
 
 export function GetRewriteRules():Promise<Array<profiles.RewriteRule>>;
@@ -26,6 +32,8 @@ export function ImportEnvConfig(arg1:string):Promise<void>;
 export function OpenFilePicker():Promise<string>;
 
 export function OpenInChrome():Promise<void>;
+
+export function RemovePACDomain(arg1:string):Promise<void>;
 
 export function SetActiveEnv(arg1:string):Promise<void>;
 

@@ -51,6 +51,13 @@ type MockRule struct {
 	Status  int
 }
 
+type WSFrame struct {
+	URL       string
+	Direction string // send or recv
+	MsgType   int
+	Payload   string
+}
+
 type LogEntry struct {
 	Method      string
 	Path        string
@@ -302,7 +309,7 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var bodyStr string
 	contentType := res.Header.Get("Content-Type")
-	if contentType == "application/json" {
+	if strings.Contains(contentType, "application/json") {
 		body, err := io.ReadAll(res.Body)
 		if err == nil {
 			res.Body = io.NopCloser(bytes.NewReader(body))
@@ -352,6 +359,10 @@ func (p *Proxy) handleWS(w http.ResponseWriter, r *http.Request) {
 			fwdHeaders[k] = v
 		}
 	}
+
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	for k, v := range p.headers {
 		switch strings.ToLower(k) {
 		case "upgrade", "connection", "sec-websocket-key", "sec-websocket-version", "sec-websocket-extensions":
@@ -366,21 +377,27 @@ func (p *Proxy) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 	defer serverConn.Close()
 	errc := make(chan error, 2)
-	relay := func(dst, src *websocket.Conn) {
+	relay := func(dst, src *websocket.Conn, direction string) {
 		for {
 			t, msg, err := src.ReadMessage()
 			if err != nil {
 				errc <- err
 				return
 			}
+			runtime.EventsEmit(p.context, "ws-frames", WSFrame{
+				URL:       targetURL.String(),
+				Direction: direction,
+				MsgType:   t,
+				Payload:   string(msg),
+			})
 			if err := dst.WriteMessage(t, msg); err != nil {
 				errc <- err
 				return
 			}
 		}
 	}
-	go relay(serverConn, clientConn)
-	go relay(clientConn, serverConn)
+	go relay(serverConn, clientConn, "send")
+	go relay(clientConn, serverConn, "recv")
 	<-errc
 }
 
@@ -400,7 +417,7 @@ func (rw *connResponseWriter) Write(b []byte) (int, error) {
 }
 
 func (rw *connResponseWriter) flush() error {
-	rw.header.Set("Content-length", strconv.Itoa(len(rw.body)))
+	rw.header.Set("Content-Length", strconv.Itoa(len(rw.body)))
 	if _, err := fmt.Fprintf(rw.conn, "HTTP/1.1 %d %s\r\n", rw.statusCode, http.StatusText(rw.statusCode)); err != nil {
 		return err
 	}

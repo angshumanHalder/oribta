@@ -6,6 +6,10 @@ export function AddEnvironment(arg1) {
   return window['go']['main']['App']['AddEnvironment'](arg1);
 }
 
+export function AddPACDomain(arg1) {
+  return window['go']['main']['App']['AddPACDomain'](arg1);
+}
+
 export function ApplyEnvMapping(arg1, arg2) {
   return window['go']['main']['App']['ApplyEnvMapping'](arg1, arg2);
 }
@@ -30,6 +34,14 @@ export function GetMocks() {
   return window['go']['main']['App']['GetMocks']();
 }
 
+export function GetPACAddr() {
+  return window['go']['main']['App']['GetPACAddr']();
+}
+
+export function GetPACDomains() {
+  return window['go']['main']['App']['GetPACDomains']();
+}
+
 export function GetProxyAddr() {
   return window['go']['main']['App']['GetProxyAddr']();
 }
@@ -48,6 +60,10 @@ export function OpenFilePicker() {
 
 export function OpenInChrome() {
   return window['go']['main']['App']['OpenInChrome']();
+}
+
+export function RemovePACDomain(arg1) {
+  return window['go']['main']['App']['RemovePACDomain'](arg1);
 }
 
 export function SetActiveEnv(arg1) {

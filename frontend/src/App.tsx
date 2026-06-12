@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { MockManager } from "./components/MockManager";
 import { ConfigPanel } from "./components/ConfigPanel";
 import { TestOutputDialog } from "./components/TestOutputDialog";
+import { WebSocketLog } from "./components/WebSocketLog";
 
 function App() {
   const [envs, setEnvs] = useState<profiles.Environment[]>([]);
@@ -115,6 +116,7 @@ function App() {
       >
         <TabsList className="shrink-0">
           <TabsTrigger value="request-log">Requests</TabsTrigger>
+          <TabsTrigger value="ws-log">WebSockets</TabsTrigger>
           <TabsTrigger value="mocks">Mocks</TabsTrigger>
           <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>
@@ -123,6 +125,9 @@ function App() {
           className="flex-1 overflow-hidden mt-0"
         >
           <RequestLog />
+        </TabsContent>
+        <TabsContent value="ws-log" className="flex-1 overflow-hidden mt-0">
+          <WebSocketLog />
         </TabsContent>
         <TabsContent value="mocks" className="flex-1 overflow-hidden mt-0">
           <MockManager />

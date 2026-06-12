@@ -21,6 +21,7 @@ type Environment struct {
 type ProfileStore struct {
 	Environments []Environment `json:"environments"`
 	Active       string        `json:"active"`
+	PACDomains   []string      `json:"pac_domains"`
 	path         string        `json:"-"`
 }
 
