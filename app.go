@@ -136,7 +136,10 @@ func (a *App) SetRewriteRules(rules []profiles.RewriteRule) {
 
 func (a *App) GetEnvironments() []profiles.Environment {
 	if a.store == nil {
-		return nil
+		return []profiles.Environment{}
+	}
+	if a.store.Environments == nil {
+		return []profiles.Environment{}
 	}
 	return a.store.Environments
 }
@@ -272,7 +275,7 @@ func (a *App) ImportEnvConfig(path string) error {
 
 func (a *App) GetEnvConfigNames() []string {
 	if a.envConfig == nil {
-		return nil
+		return []string{}
 	}
 	names := make([]string, 0, len(a.envConfig.Environments))
 	for name := range a.envConfig.Environments {
@@ -341,6 +344,9 @@ func (a *App) GetPACAddr() string {
 func (a *App) GetPACDomains() []string {
 	a.pacMu.Lock()
 	defer a.pacMu.Unlock()
+	if a.pacDomains == nil {
+		return []string{}
+	}
 	return a.pacDomains
 }
 

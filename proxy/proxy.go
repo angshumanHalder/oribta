@@ -76,8 +76,12 @@ type connResponseWriter struct {
 }
 
 func New(rules []profiles.RewriteRule) *Proxy {
+	if rules == nil {
+		rules = []profiles.RewriteRule{}
+	}
 	return &Proxy{
 		rules: rules,
+		mocks: []MockRule{},
 	}
 }
 
