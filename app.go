@@ -95,10 +95,12 @@ func (a *App) startup(ctx context.Context) {
 	a.proxy.SetCA(ca)
 
 	if goruntime.GOOS == "darwin" {
-		check := exec.Command("security", "verify-cert", "-c", homeDir+"/.config/orbita/ca.crt")
-		if check.Run() != nil {
-			exec.Command("osascript", "-e", `do shell script "security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain `+homeDir+`/.config/orbita/ca.crt" with administrator privileges`).Run()
-		}
+		go func() {
+			check := exec.Command("security", "verify-cert", "-c", homeDir+"/.config/orbita/ca.crt")
+			if check.Run() != nil {
+				exec.Command("osascript", "-e", `do shell script "security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain `+homeDir+`/.config/orbita/ca.crt" with administrator privileges`).Run()
+			}
+		}()
 	}
 
 	a.store = store
