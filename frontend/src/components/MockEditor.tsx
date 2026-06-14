@@ -10,6 +10,7 @@ type Props = {
   path: string;
   onClose: () => void;
   status: number;
+  initialBody?: string;
   onSave: (body: string, status: number) => void;
 };
 
@@ -18,16 +19,17 @@ export const MockEditor = ({
   method,
   path,
   status,
+  initialBody = "",
   onSave,
   onClose,
 }: Props) => {
   const [localStatus, setLocalStatus] = useState(status);
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialBody);
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalStatus(status);
-    setBody("");
+    setBody(initialBody);
     setJsonError(null);
   }, [open]);
 

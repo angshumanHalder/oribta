@@ -60,6 +60,7 @@ export function ConfigPanel({
         Headers: headers,
       });
       await UpdateEnvironment(updated);
+      onEnvsChange();
     } catch (err) {
       console.error("Unable to update headers", err);
     }
@@ -75,6 +76,7 @@ export function ConfigPanel({
         RewriteRules: rules,
       });
       await UpdateEnvironment(updated);
+      onEnvsChange();
     } catch (err) {
       console.error("Unable to save rules", err);
     }
