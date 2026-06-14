@@ -69,11 +69,15 @@ const jsScript = `(function() {
 	}
 	document.addEventListener('click', function(e) {
 		var target = resolveTarget(e.target);
-		console.log('__orbita__' + JSON.stringify({ type: 'click', selector: sel(target), x: e.clientX, y: e.clientY }));
+		var s = sel(target);
+		if (!s) return;
+		console.log('__orbita__' + JSON.stringify({ type: 'click', selector: s, x: e.clientX, y: e.clientY }));
 	});
 	document.addEventListener('change', function(e) {
+		var s = sel(e.target);
+		if (!s) return;
 		let masked = e.target.type === 'password';
-		console.log('__orbita__' + JSON.stringify({ type: 'input', selector: sel(e.target), value: masked ? '' : e.target.value, masked: masked }));
+		console.log('__orbita__' + JSON.stringify({ type: 'input', selector: s, value: masked ? '' : e.target.value, masked: masked }));
 	});
 }())`
 
@@ -247,6 +251,9 @@ func (r *Recorder) handleConsoleEvent(sess *RecordSession, e *runtime.EventConso
 		})
 	case "click":
 		selector, _ := m["selector"].(string)
+		if selector == "" {
+			return
+		}
 		x, _ := m["x"].(float64)
 		y, _ := m["y"].(float64)
 		sess.Events = append(sess.Events, Event{
@@ -256,6 +263,9 @@ func (r *Recorder) handleConsoleEvent(sess *RecordSession, e *runtime.EventConso
 		})
 	case "input":
 		selector, _ := m["selector"].(string)
+		if selector == "" {
+			return
+		}
 		value, _ := m["value"].(string)
 		masked, _ := m["masked"].(bool)
 		sess.Events = append(sess.Events, Event{
