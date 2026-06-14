@@ -47,41 +47,53 @@ export function EnvMappingPanel({ onMappingApplied }: Props) {
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-foreground">Config File</h3>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground font-mono truncate flex-1">
-            {filePath || "No file selected"}
-          </span>
-          <Button size="sm" onClick={handleImportFile}>Import</Button>
+          <Input
+            value={filePath || "No file selected"}
+            readOnly
+            className="flex-1 h-7 text-xs font-mono text-muted-foreground cursor-default"
+          />
+          <Button size="sm" onClick={handleImportFile}>
+            Import
+          </Button>
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium text-foreground">Environment Mapping</h3>
-        <div className="flex items-end gap-3">
-          <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs text-muted-foreground">From</label>
-            <Select value={fromEnv} onValueChange={(v) => setFromEnv(v ?? "")}>
-              <SelectTrigger><SelectValue placeholder="Select environment" /></SelectTrigger>
-              <SelectContent>
-                {envNames.map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs text-muted-foreground">To</label>
-            <Select value={toEnv} onValueChange={(v) => setToEnv(v ?? "")}>
-              <SelectTrigger><SelectValue placeholder="Select environment" /></SelectTrigger>
-              <SelectContent>
-                {envNames.map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <h3 className="text-sm font-medium text-foreground">
+          Environment Mapping
+        </h3>
+        <div className="flex items-center gap-2">
+          <Select value={fromEnv} onValueChange={(v) => setFromEnv(v ?? "")}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="From" />
+            </SelectTrigger>
+            <SelectContent>
+              {envNames.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={toEnv} onValueChange={(v) => setToEnv(v ?? "")}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="To" />
+            </SelectTrigger>
+            <SelectContent>
+              {envNames.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            disabled={!fromEnv || !toEnv}
+            onClick={handleApplyEnvMapping}
+          >
+            Apply Mapping
+          </Button>
         </div>
-        <Button size="sm" className="w-fit" onClick={handleApplyEnvMapping}>
-          Apply Mapping
-        </Button>
       </div>
     </div>
   );

@@ -36,59 +36,53 @@ export function RewriteRulesEditor({ rules, onSave }: Props) {
   };
 
   return (
-    <div className="flex flex-col">
-      <div className="flex mb-2">
-        <div className="flex-auto w-34 me-1">From</div>
-        <div className="flex-auto w-66 me-1">To</div>
-        <div className="flex-none w-6" />
+    <div className="flex flex-col gap-2">
+      <div className="flex px-1">
+        <div className="flex-auto w-34 me-1 text-xs text-muted-foreground">From</div>
+        <div className="flex-auto w-66 me-1 text-xs text-muted-foreground">To</div>
+        <div className="flex-none w-8" />
       </div>
-      {rows.map((row, idx) => (
-        <div key={idx} className="flex mb-2">
-          <div className="flex-auto w-34 me-1">
-            <Input
-              value={row.From}
-              placeholder="From (e.g. http://localhost:8080)"
-              onChange={(e) => {
-                const updated = rows.map((r, i) =>
-                  i === idx ? { ...r, From: e.target.value } : r,
-                );
-                setRows(updated);
-              }}
-            />
+      <div className="flex flex-col gap-2 overflow-y-auto max-h-48 px-1 py-1">
+        {rows.map((row, idx) => (
+          <div key={idx} className="flex gap-1">
+            <div className="flex-auto w-34">
+              <Input
+                value={row.From}
+                placeholder="http://localhost:8080"
+                onChange={(e) => {
+                  const updated = rows.map((r, i) =>
+                    i === idx ? { ...r, From: e.target.value } : r,
+                  );
+                  setRows(updated);
+                }}
+              />
+            </div>
+            <div className="flex-auto w-66">
+              <Input
+                value={row.To}
+                placeholder="http://localhost:9090"
+                onChange={(e) => {
+                  const updated = rows.map((r, i) =>
+                    i === idx ? { ...r, To: e.target.value } : r,
+                  );
+                  setRows(updated);
+                }}
+              />
+            </div>
+            <Button
+              variant="destructive"
+              className="flex-none w-8 cursor-pointer"
+              onClick={() => removeRowHandler(idx)}
+            >
+              <Trash />
+            </Button>
           </div>
-          <div className="flex-auto w-66 me-1">
-            <Input
-              value={row.To}
-              placeholder="To (e.g. http://localhost:8080)"
-              onChange={(e) => {
-                const updated = rows.map((r, i) =>
-                  i === idx ? { ...r, To: e.target.value } : r,
-                );
-                setRows(updated);
-              }}
-            />
-          </div>
-          <Button
-            variant="destructive"
-            className="flex-none w-8 cursor-pointer"
-            onClick={() => removeRowHandler(idx)}
-          >
-            <Trash />
-          </Button>
-        </div>
-      ))}
-      <Button
-        variant="secondary"
-        className="w-full mb-2 cursor-pointer"
-        onClick={addRowHandler}
-      >
+        ))}
+      </div>
+      <Button variant="secondary" className="w-full cursor-pointer" onClick={addRowHandler}>
         Add Row
       </Button>
-      <Button
-        variant="default"
-        className="w-full cursor-pointer"
-        onClick={() => saveRowsHandler()}
-      >
+      <Button variant="default" className="w-full cursor-pointer" onClick={saveRowsHandler}>
         Save
       </Button>
     </div>
