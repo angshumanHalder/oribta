@@ -187,8 +187,9 @@ func (p *Proxy) rewrite(rawURL string) string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	for _, r := range p.rules {
-		if strings.HasPrefix(normalized, r.From) {
-			return r.To + strings.TrimPrefix(normalized, r.From)
+		normalizedFrom := stripDefaultPort(r.From)
+		if strings.HasPrefix(normalized, normalizedFrom) {
+			return r.To + strings.TrimPrefix(normalized, normalizedFrom)
 		}
 	}
 	return rawURL
@@ -234,12 +235,12 @@ func (p *Proxy) handleCONNECT(w http.ResponseWriter, r *http.Request) {
 		}
 		req.URL.Scheme = "https"
 		req.URL.Host = r.Host
-		rw := newConnResponseWriter(tlsConn, reader)
 		if strings.EqualFold(req.Header.Get("Upgrade"), "websocket") {
 			req.URL.Scheme = "wss"
 			p.handleWS(newConnResponseWriter(tlsConn, reader), req)
 			return
 		}
+		rw := newConnResponseWriter(tlsConn, reader)
 		p.handleHTTP(rw, req)
 		if err := rw.flush(); err != nil {
 			return
@@ -296,16 +297,18 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if m.Enabled && strings.EqualFold(m.Method, r.Method) && mockPath == targetURL.Path {
 			timeEnd := time.Since(startTime).Milliseconds()
-			runtime.EventsEmit(p.context, "request-log", LogEntry{
-				Method:      m.Method,
-				Path:        targetURL.RequestURI(),
-				Host:        targetURL.Hostname(),
-				Status:      m.Status,
-				Latency:     timeEnd,
-				Mocked:      m.Enabled,
-				ContentType: "application/json",
-				Time:        time.Now().UnixMilli(),
-			})
+			if p.context != nil {
+				runtime.EventsEmit(p.context, "request-log", LogEntry{
+					Method:      m.Method,
+					Path:        targetURL.RequestURI(),
+					Host:        targetURL.Hostname(),
+					Status:      m.Status,
+					Latency:     timeEnd,
+					Mocked:      m.Enabled,
+					ContentType: "application/json",
+					Time:        time.Now().UnixMilli(),
+				})
+			}
 			w.Header().Set("Content-Type", "application/json")
 			if origin := r.Header.Get("Origin"); origin != "" {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -346,16 +349,18 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	res.Header.Del("Access-Control-Allow-Credentials")
 	res.Header.Del("Access-Control-Allow-Methods")
 	res.Header.Del("Access-Control-Allow-Headers")
-	runtime.EventsEmit(p.context, "request-log", LogEntry{
-		Method:      r.Method,
-		Path:        targetURL.RequestURI(),
-		Host:        targetURL.Hostname(),
-		Status:      res.StatusCode,
-		Latency:     time.Since(startTime).Milliseconds(),
-		Mocked:      false,
-		ContentType: res.Header.Get("Content-Type"),
-		Time:        time.Now().UnixMilli(),
-	})
+	if p.context != nil {
+		runtime.EventsEmit(p.context, "request-log", LogEntry{
+			Method:      r.Method,
+			Path:        targetURL.RequestURI(),
+			Host:        targetURL.Hostname(),
+			Status:      res.StatusCode,
+			Latency:     time.Since(startTime).Milliseconds(),
+			Mocked:      false,
+			ContentType: res.Header.Get("Content-Type"),
+			Time:        time.Now().UnixMilli(),
+		})
+	}
 
 	copyHeaders(w.Header(), res.Header)
 
@@ -448,12 +453,14 @@ func (p *Proxy) handleWS(w http.ResponseWriter, r *http.Request) {
 				errc <- err
 				return
 			}
-			runtime.EventsEmit(p.context, "ws-frames", WSFrame{
-				URL:       targetURL.String(),
-				Direction: direction,
-				MsgType:   t,
-				Payload:   string(msg),
-			})
+			if p.context != nil {
+				runtime.EventsEmit(p.context, "ws-frames", WSFrame{
+					URL:       targetURL.String(),
+					Direction: direction,
+					MsgType:   t,
+					Payload:   string(msg),
+				})
+			}
 			if err := dst.WriteMessage(t, msg); err != nil {
 				errc <- err
 				return

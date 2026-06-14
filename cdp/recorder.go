@@ -88,9 +88,10 @@ type RecordSession struct {
 }
 
 type Recorder struct {
-	session *RecordSession
-	cancel  context.CancelFunc
-	mu      sync.RWMutex
+	session     *RecordSession
+	cancel      context.CancelFunc
+	allocCancel context.CancelFunc
+	mu          sync.RWMutex
 }
 
 func NewRecorder() *Recorder {
@@ -103,7 +104,8 @@ func (r *Recorder) Start() error {
 	if r.session != nil {
 		return nil
 	}
-	allocCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), "ws://localhost:9222")
+	allocCtx, allocCancel := chromedp.NewRemoteAllocator(context.Background(), "ws://localhost:9222")
+	r.allocCancel = allocCancel
 
 	var tabID string
 	if resp, err := http.Get("http://localhost:9222/json"); err == nil {
@@ -112,7 +114,9 @@ func (r *Recorder) Start() error {
 			URL  string `json:"url"`
 			Type string `json:"type"`
 		}
-		json.NewDecoder(resp.Body).Decode(&tabs)
+		if err := json.NewDecoder(resp.Body).Decode(&tabs); err != nil {
+			fmt.Println("cdp: failed to decode tabs:", err)
+		}
 		resp.Body.Close()
 		for _, t := range tabs {
 			if t.Type == "page" && t.URL != "" && t.URL != "about:blank" {
@@ -124,6 +128,7 @@ func (r *Recorder) Start() error {
 	r.session = &RecordSession{}
 
 	var ctx context.Context
+	var cancel context.CancelFunc
 	if tabID != "" {
 		ctx, cancel = chromedp.NewContext(allocCtx, chromedp.WithTargetID(target.ID(tabID)))
 	} else {
@@ -177,6 +182,10 @@ func (r *Recorder) Close() {
 		r.cancel()
 		r.cancel = nil
 	}
+	if r.allocCancel != nil {
+		r.allocCancel()
+		r.allocCancel = nil
+	}
 	r.session = nil
 }
 
@@ -224,24 +233,22 @@ func (r *Recorder) handleConsoleEvent(sess *RecordSession, e *runtime.EventConso
 			Navigation: &NavigationEvent{URL: url},
 		})
 	case "click":
+		selector, _ := m["selector"].(string)
+		x, _ := m["x"].(float64)
+		y, _ := m["y"].(float64)
 		sess.Events = append(sess.Events, Event{
 			Type:      EventClick,
 			Timestamp: time.Now().UnixMilli(),
-			Click: &ClickEvent{
-				Selector: m["selector"].(string),
-				X:        m["x"].(float64),
-				Y:        m["y"].(float64),
-			},
+			Click:     &ClickEvent{Selector: selector, X: x, Y: y},
 		})
 	case "input":
+		selector, _ := m["selector"].(string)
+		value, _ := m["value"].(string)
+		masked, _ := m["masked"].(bool)
 		sess.Events = append(sess.Events, Event{
 			Type:      EventInput,
 			Timestamp: time.Now().UnixMilli(),
-			Input: &InputEvent{
-				Selector: m["selector"].(string),
-				Value:    m["value"].(string),
-				Masked:   m["masked"].(bool),
-			},
+			Input:     &InputEvent{Selector: selector, Value: value, Masked: masked},
 		})
 	}
 }

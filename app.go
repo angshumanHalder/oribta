@@ -56,6 +56,47 @@ func (a *App) startup(ctx context.Context) {
 		})
 	})
 
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("no home directory found", err)
+		return
+	}
+
+	configPath := homeDir + "/.config/orbita/profiles.json"
+	store, err := profiles.Load(configPath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	ca, err := proxy.LoadOrGenerate(homeDir+"/.config/orbita/ca.crt", homeDir+"/.config/orbita/ca.key")
+	if err != nil {
+		fmt.Println("CA init error")
+		return
+	}
+	a.proxy.SetCA(ca)
+
+	a.mocksPath = homeDir + "/.config/orbita/mocks.json"
+	if data, err := os.ReadFile(a.mocksPath); err == nil {
+		var mocks []proxy.MockRule
+		if err := json.Unmarshal(data, &mocks); err != nil {
+			fmt.Println("mocks.json corrupted:", err)
+		} else if len(mocks) > 0 {
+			a.proxy.SetMocks(mocks)
+		}
+	}
+
+	a.store = store
+	if len(a.store.PACDomains) > 0 {
+		a.pacMu.Lock()
+		a.pacDomains = a.store.PACDomains
+		a.pacMu.Unlock()
+	}
+	if env := a.store.ActiveEnv(); env != nil {
+		a.proxy.SetHeaders(env.Headers)
+		a.proxy.SetRules(env.RewriteRules)
+	}
+
 	addr, err := a.proxy.Start()
 	if err != nil {
 		fmt.Println("proxy start error", err)
@@ -77,33 +118,6 @@ func (a *App) startup(ctx context.Context) {
 	fmt.Println("proxy listening on ", addr)
 	fmt.Println("PAC server ", a.pacAddr)
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println("no home directory found", err)
-		return
-	}
-
-	configPath := homeDir + "/.config/orbita/profiles.json"
-	store, err := profiles.Load(configPath)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	ca, err := proxy.LoadOrGenerate(homeDir+"/.config/orbita/ca.crt", homeDir+"/.config/orbita/ca.key")
-	if err != nil {
-		fmt.Println("CA init error")
-		return
-	}
-	a.proxy.SetCA(ca)
-
-	a.mocksPath = homeDir + "/.config/orbita/mocks.json"
-	if data, err := os.ReadFile(a.mocksPath); err == nil {
-		var mocks []proxy.MockRule
-		if json.Unmarshal(data, &mocks) == nil && len(mocks) > 0 {
-			a.proxy.SetMocks(mocks)
-		}
-	}
-
 	if goruntime.GOOS == "darwin" {
 		go func() {
 			check := exec.Command("security", "verify-cert", "-c", homeDir+"/.config/orbita/ca.crt")
@@ -111,17 +125,6 @@ func (a *App) startup(ctx context.Context) {
 				exec.Command("osascript", "-e", `do shell script "security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain `+homeDir+`/.config/orbita/ca.crt" with administrator privileges`).Run()
 			}
 		}()
-	}
-
-	a.store = store
-	if len(a.store.PACDomains) > 0 {
-		a.pacMu.Lock()
-		a.pacDomains = a.store.PACDomains
-		a.pacMu.Unlock()
-	}
-	if env := a.store.ActiveEnv(); env != nil {
-		a.proxy.SetHeaders(env.Headers)
-		a.proxy.SetRules(env.RewriteRules)
 	}
 }
 
@@ -229,7 +232,9 @@ func (a *App) SetMocks(mocks []proxy.MockRule) {
 	a.proxy.SetMocks(mocks)
 	if a.mocksPath != "" {
 		if data, err := json.Marshal(mocks); err == nil {
-			os.WriteFile(a.mocksPath, data, 0644)
+			if err := os.WriteFile(a.mocksPath, data, 0644); err != nil {
+				fmt.Println("failed to save mocks:", err)
+			}
 		}
 	}
 	if a.ctx != nil {

@@ -31,7 +31,7 @@ export const MockEditor = ({
     setLocalStatus(status);
     setBody(initialBody);
     setJsonError(null);
-  }, [open]);
+  }, [open, initialBody, status]);
 
   const handleBodyChange = (val: string) => {
     setBody(val);
