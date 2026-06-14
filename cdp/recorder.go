@@ -64,8 +64,12 @@ const jsScript = `(function() {
 		if (el.name) return '[name="' + el.name + '"]';
 		return el.tagName.toLowerCase();
 	}
+	function resolveTarget(el) {
+		return el.closest('button, a, input, select, textarea, label, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [id], [data-testid], [name]') || el;
+	}
 	document.addEventListener('click', function(e) {
-		console.log('__orbita__' + JSON.stringify({ type: 'click', selector: sel(e.target), x: e.clientX, y: e.clientY }));
+		var target = resolveTarget(e.target);
+		console.log('__orbita__' + JSON.stringify({ type: 'click', selector: sel(target), x: e.clientX, y: e.clientY }));
 	});
 	document.addEventListener('change', function(e) {
 		let masked = e.target.type === 'password';
@@ -94,6 +98,15 @@ type Recorder struct {
 	mu          sync.RWMutex
 }
 
+func isUserPage(u string) bool {
+	for _, prefix := range []string{"devtools://", "chrome://", "chrome-extension://", "about:"} {
+		if strings.HasPrefix(u, prefix) {
+			return false
+		}
+	}
+	return strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")
+}
+
 func NewRecorder() *Recorder {
 	return &Recorder{}
 }
@@ -119,7 +132,7 @@ func (r *Recorder) Start() error {
 		}
 		resp.Body.Close()
 		for _, t := range tabs {
-			if t.Type == "page" && t.URL != "" && t.URL != "about:blank" {
+			if t.Type == "page" && isUserPage(t.URL) {
 				tabID = t.ID
 				break
 			}
